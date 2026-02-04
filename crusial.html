@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Crucial - Päätöksenteon Lukitus</title>
+  <style>
+    body { font-family: monospace; background: #000; color: #0f0; padding: 20px; margin:0; }
+    .decision { border: 1px solid #0f0; padding: 10px; margin: 10px 0; }
+    .vetovoima { font-size: 2em; }
+    .pk-map { width: 100%; text-align: center; font-size: 1.2em; margin: 20px 0; border: 1px dashed #0f0; }
+    .alert { color: #f00; font-size: 1.5em; text-align: center; }
+    input, button { background: #000; color: #0f0; border: 1px solid #0f0; padding: 5px; font-family: monospace; }
+  </style>
+</head>
+<body>
+
+  <h2>Crucial - Myytävä Päätöksenteon Työkalu</h2>
+  <p>Anna asiakkaan tiedot. Crucial generoi polun ja raportin.</p>
+  <div class="decision">
+    Päätös: <input type="text" id="paatos" placeholder="esim. Uusi vahvuskone vai uusi tyyppi?"> <br>
+    Asiakas: <input type="text" id="asiakas" placeholder="esim. Siivous ABC Oy"> <br>
+    Ongelma: <input type="text" id="ongelma" placeholder="esim. Rappuset likaantuu, työntekijät väsy"> <br>
+    Speksit: <input type="text" id="spexit" placeholder="esim. Kone: 1.5 kW, Tyyppi: 50 €/h"> <br>
+    <button onclick="aloita()">Generoi Polku</button>
+  </div>
+
+  <div id="output"></div>
+
+  <script>
+    let vetovoima = 0;
+    let pk = 0;
+    let liiketoiminta = 'yleinen'; // Tunnistetaan automaattisesti
+
+    function aloita() {
+      let paatos = document.getElementById("paatos").value;
+      let asiakas = document.getElementById("asiakas").value;
+      let ongelma = document.getElementById("ongelma").value.toLowerCase();
+      let spex = document.getElementById("spexit").value;
+
+      // Tunnista liiketoiminta avainsanoista (laajenna tarpeen mukaan)
+      if (ongelma.includes('rappu') || ongelma.includes('likainen') || ongelma.includes('siivou') || ongelma.includes('vahvus')) {
+        liiketoiminta = 'siivous';
+      } else if (ongelma.includes('imuauto') || ongelma.includes('seisokki') || ongelma.includes('jäte') || ongelma.includes('viemäri')) {
+        liiketoiminta = 'jatehuolto';
+      } else if (ongelma.includes('it') || ongelma.includes('ohjelmisto') || ongelma.includes('palvelin')) {
+        liiketoiminta = 'it';
+      } // Lisää muita (esim. 'ravintola', 'tehdas')
+
+      let html = `
+        <div class="decision">
+          <strong>Päätös:</strong> ${paatos}<br>
+          <strong>Asiakas:</strong> ${asiakas}<br>
+          <strong>Ongelma:</strong> ${ongelma}<br>
+          <strong>Speksit:</strong> ${spex}<br><br>
+          <strong>Liiketoiminta tunnistettu:</strong> ${liiketoiminta.toUpperCase()}<br>
+          <div class="vetovoima">Vetovoima: 0</div>
+          <div>PK: 0</div>
+          <div class="pk-map">PK-MAP: Tunnistettu vuoto: 0</div>
+          <input type="text" id="lisaa" placeholder="Lisää kommentti (esim. kysy taloudelta)"><br>
+          <button onclick="lisaaPK()">Jatka</button>
+          <button onclick="lukitse()">Lukitse</button>
+          <button onclick="generoiRaportti()">Generoi Raportti</button>
+        </div>`;
+      document.getElementById("output").innerHTML = html;
+    }
+
+    function lisaaPK() {
+      let lisays = document.getElementById("lisaa").value;
+      let pkLisays = 1; // Geneerinen, mutta liiketoimintakohtainen
+
+      // Liiketoimintakohtainen logiikka PK:lle
+      if (liiketoiminta === 'siivous') {
+        pkLisays = lisays.includes('talous') ? 3 : 2; // Esim. talous viivästyttää asiakasmenetyksiä
+      } else if (liiketoiminta === 'jatehuolto') {
+        pkLisays = lisays.includes('legal') ? 4 : 2; // Esim. legal nostaa seisokkiriskiä
+      } else if (liiketoiminta === 'it') {
+        pkLisays = lisays.includes('audit') ? 5 : 3; // Esim. audit viivästyttää kehitystä
+      }
+
+      vetovoima += pkLisays;
+      pk += pkLisays;
+      document.querySelector(".vetovoima").innerText = `Vetovoima: ${vetovoima}`;
+      document.querySelector(".decision div:nth-child(7)").innerText = `PK: ${pk} - ${lisays}`;
+      let mapText = `PK-MAP: Lattia/Seisokki: ${Math.floor(pk/3)} ••• | Asiakas: ${Math.floor(pk/2)} •• | Työntekijä/Riski: ${pk} ••••`;
+      document.querySelector(".pk-map").innerHTML = mapText;
+      if (vetovoima > 10) document.querySelector(".pk-map").innerHTML += `<div class="alert">Tää vetää liikaa. Vuoto kasvaa.</div>`;
+    }
+
+    function lukitse() {
+      document.querySelector(".vetovoima").innerText = "Vetovoima: 0";
+      document.querySelector(".decision div:nth-child(7)").innerText = "PK: 0 - Lukittu.";
+      document.querySelector(".pk-map").innerHTML += "<div class='alert'>Hiljaisuus. Päätös pysyy.</div>";
+    }
+
+    function generoiRaportti() {
+      let raportti = `
+        <div class="decision">
+          <h3>Raportti Asiakkaalle</h3>
+          <p>Asiakas: ${document.getElementById("asiakas").value}</p>
+          <p>Jos lukitset nyt: PK = 0. Vuoto pysähtyy. Suositeltu tuote: Rakenteenlukitus + Valvonta (${liiketoiminta}-spesifinen paketti).</p>
+          <p>Jos et lukitse: PK kasvaa ${pk + 5}. Esim. ${liiketoiminta === 'siivous' ? 'Asiakkaat katoavat hiljaa' : 'Seisokit kasvavat' }.</p>
+          <p>Hinta-arvio paketti: 5k€/vuosi. Arvo: Estää vuodot.</p>
+          <p>Lähetä tämä asiakkaalle – näyttää konkreettiselta.</p>
+        </div>`;
+      document.getElementById("output").innerHTML += raportti;
+    }
+  </script>
+</body>
+</html>
